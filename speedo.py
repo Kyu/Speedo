@@ -8,24 +8,22 @@ stop = None
 trial = 0
 diff_threshold = 100
 dist = 1
+display = False
 
 
-def calc_speed(diff):
-    global dist
-    # Using a magic formula
-
-    spd = (0.0251*dist + 0.89)
-
-    time_in_camera = timed_movement(diff)
+def calc_velocity(difference):
+    time_in_camera = timed_movement(difference)
     if time_in_camera:
-        speed = time_in_camera.total_seconds() * 10
-        return speed
+        velocity = 50.95254495 / (time_in_camera.total_seconds() * 10) # 10 for balance, will remove
+        velocity_mph = velocity/1.467
+        return velocity_mph
+
     return None
 
 
-def timed_movement(diff):
+def timed_movement(difference):
     global movement_detected, start, stop, trial, diff_threshold
-    diff_max = diff.max()
+    diff_max = difference.max()
 
     if movement_detected:
         if diff_max >= diff_threshold:
@@ -49,8 +47,9 @@ def timed_movement(diff):
             pass
 
 
-cv2.namedWindow('MotionDetect', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('MotionDetect', 800, 600)
+if display:
+    cv2.namedWindow('MotionDetect', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('MotionDetect', 800, 600)
 
 still_img = '/home/precious/dynamics/still-img.webm'
 sec_cam = '/home/precious/dynamics/security_cam.mkv'
@@ -61,28 +60,27 @@ if cap.isOpened():
 else:
     ret = False
 
-ret,frame1 = cap.read()
-ret,frame2 = cap.read()
-
+ret, frame1 = cap.read()
+ret, frame2 = cap.read()
 
 while ret:
     ret, frame = cap.read()
 
     diff = cv2.absdiff(frame1, frame2)
-    speed = calc_speed(diff)
+    speed = calc_velocity(diff)
     if speed:
-
         print("Speed: {0} mph".format(speed))
 
-    grey = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+    if display:
+        grey = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
 
-    blur = cv2.GaussianBlur(grey, (5, 5), 0)
-    ret, th = cv2.threshold(blur, 100, 255, cv2.THRESH_BINARY)
-    dilated = cv2.dilate(th, np.ones((3, 3), np.uint8), iterations=3)
-    c, h = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        blur = cv2.GaussianBlur(grey, (5, 5), 0)
+        ret, th = cv2.threshold(blur, 100, 255, cv2.THRESH_BINARY)
+        dilated = cv2.dilate(th, np.ones((3, 3), np.uint8), iterations=3)
+        c, h = cv2.findContours(dilated, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    cv2.drawContours(frame1, c, -1, (255/2, 0, 255/2), 2)
-    cv2.imshow("MotionDetect", frame1)
+        cv2.drawContours(frame1, c, -1, (255/2, 0, 255/2), 2)
+        cv2.imshow("MotionDetect", frame1)
 
     if cv2.waitKey(1) == 27:
         break
@@ -92,6 +90,3 @@ while ret:
 
 cap.release()
 cv2.destroyAllWindows()
-
-# +30 cpu, + 4 ram w/o display
-
